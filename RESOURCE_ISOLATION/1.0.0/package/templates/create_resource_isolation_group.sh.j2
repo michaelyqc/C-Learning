@@ -1,0 +1,390 @@
+#!/bin/bash
+
+# using ambari_sudo.sh
+ambari_sudo="/var/lib/ambari-agent/ambari-sudo.sh"
+
+open_group={{open_group}}
+# if this resource isolation grouping is not open, exit directly and do nothing
+if [ $open_group != 'True' ]; then
+    exit 0
+fi
+
+
+# -----------------------------------------------------------------------
+# shell global variable *_*
+# -----------------------------------------------------------------------
+# create grouping at each opening cgroup subsystem
+cgroup_root={{cgroup_root}}
+moving_descendant_process_pid={{moving_descendant_process_pid}}
+group_name={{group_name}}
+service_pid_file_list={{service_pid_file_list}}
+
+# subsystem config
+cpu_cpuaact_subsystem_mount_same_dir={{cpu_cpuaact_subsystem_mount_same_dir}}
+using_cpu_subsys={{using_cpu_subsys}}
+using_cpuacct_subsys={{using_cpuacct_subsys}}
+just_support_cpu_shares={{just_support_cpu_shares}}
+using_memory_subsys={{using_memory_subsys}}
+using_cpuset_subsys={{using_cpuset_subsys}}
+using_blkio_subsys={{using_blkio_subsys}}
+just_support_blkio_shares={{just_support_blkio_shares}}
+net_subsystem_mount_same_dir={{net_subsystem_mount_same_dir}}
+using_net_cls_subsys={{using_net_cls_subsys}}
+using_net_prio_subsys={{using_net_prio_subsys}}
+
+# cpu subsystem config
+cfs_period_us={{cfs_period_us}}
+cfs_quota_us={{cfs_quota_us}}
+rt_period_us={{rt_period_us}}
+rt_runtime_us={{rt_runtime_us}}
+cpu_shares={{cpu_shares}}
+
+# memory subsystem config
+mem_limit_in_bytes={{mem_limit_in_bytes}}
+memsw_limit_in_bytes={{memsw_limit_in_bytes}}
+move_charge_at_immigrate={{move_charge_at_immigrate}}
+force_empty={{force_empty}}
+oom_control={{oom_control}}
+use_hierarchy={{use_hierarchy}}
+
+# cpuset subsystem config
+cpus={{cpus}}
+cpu_exclusive={{cpu_exclusive}}
+mems={{mems}}
+mem_exclusive={{mem_exclusive}}
+memory_pressure_enabled={{memory_pressure_enabled}}
+
+# blkio subsystem config
+read_bps_device={{read_bps_device}}
+write_bps_device={{write_bps_device}}
+read_iops_device={{read_iops_device}}
+write_iops_device={{write_iops_device}}
+
+blkio_weight={{blkio_weight}}
+blkio_weight_device={{blkio_weight_device}}
+blkio_leaf_weight={{blkio_leaf_weight}}
+blkio_leaf_weight_device={{blkio_leaf_weight_device}}
+
+
+# net_cls subsystem config
+net_cls_classid={{net_cls_classid}}
+total_bandwith={{total_bandwith}}
+assured_rate={{assured_rate}}
+ceil_rate={{ceil_rate}}
+
+# net_prio subsystem config
+net_prio_ifpriomap={{net_prio_ifpriomap}}
+
+
+# -----------------------------------------------------------------------
+# shell global function ~_~
+# -----------------------------------------------------------------------
+function recursion_moving_pid()
+{
+    subsystem=$1
+    parent_pid=$2
+    $ambari_sudo echo $parent_pid > $cgroup_root/$subsystem/$group_name/cgroup.procs
+    # moving children process of $pid to this subgroup
+    if [ $moving_descendant_process_pid == 'True' ]; then 
+        for child_pid in `ps --ppid $parent_pid | awk '{ print $1 }' |  grep -v "^PID"`
+        do
+            recursion_moving_pid $subsystem $child_pid
+        done
+    fi 
+}
+
+function moving_pid_to_new_group()
+{
+    subsystem=$1
+    for pid in `echo $service_pid_file_list | sed 's/,/ /g'`
+    do
+        parent_pid=`cat $pid | head -1`
+        if [[ "$parent_pid" =~ ^[1-9][0-9]*$ ]]; then
+            recursion_moving_pid $subsystem $parent_pid
+        fi
+    done
+}
+
+
+function create_cpu_subgroup()
+{
+    subsystem=$1
+    
+    # create children group
+    cpu_subgroup=$cgroup_root/$subsystem/$group_name
+    $ambari_sudo mkdir $cpu_subgroup
+
+    # some operation system maybe not support this cgroup subsystem
+    if [ $? -ne 0 ]; then
+        return
+    fi
+
+    # write config, default value : cfs_quota_us = -1, rt_runtime_us = 0
+    if [ $just_support_cpu_shares != 'True' ]; then
+        if [ $cfs_quota_us -ge -1 -a $cfs_period_us -gt 0 ]; then
+            $ambari_sudo echo "$cfs_period_us" > $cpu_subgroup/cpu.cfs_period_us
+            $ambari_sudo echo "$cfs_quota_us" > $cpu_subgroup/cpu.cfs_quota_us
+        fi
+        if [ $rt_runtime_us -ge 0 -a $rt_period_us -gt 0 ]; then
+            $ambari_sudo echo "$rt_period_us" > $cpu_subgroup/cpu.rt_period_us
+            $ambari_sudo echo "$rt_runtime_us" > $cpu_subgroup/cpu.rt_runtime_us
+        fi
+    fi
+    
+    # cpu_shares
+    $ambari_sudo echo "$cpu_shares" > $cpu_subgroup/cpu.shares
+
+    # moving process pid to children group
+    moving_pid_to_new_group $subsystem 
+}
+
+
+function create_cpuacct_subgroup()
+{
+    # cpuacct
+    cpuacct_subgroup=$cgroup_root/cpuacct/$group_name
+    $ambari_sudo mkdir $cpuacct_subgroup
+    if [ $? -ne 0 ]; then
+        return
+    fi
+
+    # moving process pid to children group
+    moving_pid_to_new_group cpuacct
+}
+
+
+function create_memory_subgroup()
+{
+    memory_subgroup=$cgroup_root/memory/$group_name
+    $ambari_sudo mkdir $memory_subgroup
+    if [ $? -ne 0 ]; then
+        return
+    fi
+
+    # write config
+    $ambari_sudo echo "$mem_limit_in_bytes" > $memory_subgroup/memory.limit_in_bytes
+    $ambari_sudo echo "$memsw_limit_in_bytes" > $memory_subgroup/memory.memsw.limit_in_bytes
+    if [ $move_charge_at_immigrate == 'True' ]; then
+        $ambari_sudo echo "1" > $memory_subgroup/memory.move_charge_at_immigrate 
+    else
+        $ambari_sudo echo "0" > $memory_subgroup/memory.move_charge_at_immigrate 
+    fi
+    
+    if [ $oom_control == 'True' ]; then
+        $ambari_sudo echo "1" > $memory_subgroup/memory.oom_control
+    else
+        $ambari_sudo echo "0" > $memory_subgroup/memory.oom_control
+    fi
+    
+    if [ $use_hierarchy == 'True' ]; then
+        $ambari_sudo echo "1" > $memory_subgroup/memory.use_hierarchy
+    else
+        $ambari_sudo echo "0" > $memory_subgroup/memory.use_hierarchy
+    fi
+
+    # moving process pid to children group
+    moving_pid_to_new_group memory
+}
+
+
+function create_cpuset_subgroup()
+{
+    cpuset_subgroup=$cgroup_root/cpuset/$group_name
+    $ambari_sudo mkdir $cpuset_subgroup
+    if [ $? -ne 0 ]; then
+        return
+    fi
+   
+    if [ "$cpus" != "-1" ]; then
+        $ambari_sudo echo "$cpus" > $cpuset_subgroup/cpuset.cpus
+    fi
+
+    if [ $cpu_exclusive == 'True' ]; then
+        $ambari_sudo echo "1" > $cpuset_subgroup/cpuset.cpu_exclusive
+    else
+        $ambari_sudo echo "0" > $cpuset_subgroup/cpuset.cpu_exclusive
+    fi
+    
+    if [ "$mems" != "-1" ]; then
+        $ambari_sudo echo "$mems" > $cpuset_subgroup/cpuset.mems
+    fi
+
+    if [ $mem_exclusive == 'True' ]; then
+        $ambari_sudo echo "1" > $cpuset_subgroup/cpuset.mem_exclusive
+    else
+        $ambari_sudo echo "0" > $cpuset_subgroup/cpuset.mem_exclusive
+    fi
+    
+    if [ $memory_pressure_enabled == 'True' ]; then
+        $ambari_sudo echo '1' > $cgroup_root/cpuset/cpuset.memory_pressure_enabled
+    else
+        $ambari_sudo echo '0' > $cgroup_root/cpuset/cpuset.memory_pressure_enabled
+    fi
+
+    # moving process pid to children group
+    moving_pid_to_new_group cpuset
+}
+
+
+function create_blkio_subgroup()
+{
+    blkio_subgroup=$cgroup_root/blkio/$group_name
+    $ambari_sudo mkdir $blkio_subgroup
+    if [ $? -ne 0 ]; then
+        return
+    fi
+
+    # throttling/upper limit policy
+    if [ $just_support_blkio_shares != 'True' ]; then
+        for disk in `cat /proc/partitions | grep -v "major minor" | grep "[0-9]" | grep -v "[1-9]$" | awk '{ print $1"-"$2 }'`
+        do
+            major=`echo $disk | awk -F "-" '{ print $1 }'`
+            minor=`echo $disk | awk -F "-" '{ print $2 }'`
+            if [ $read_bps_device -gt -1 ]; then
+                $ambari_sudo echo "$major:$minor $read_bps_device" > $blkio_subgroup/blkio.throttle.read_bps_device
+            fi
+            if [ $write_bps_device -gt -1 ]; then
+                $ambari_sudo echo "$major:$minor $write_bps_device" > $blkio_subgroup/blkio.throttle.write_bps_device
+            fi
+            if [ $read_iops_device -gt -1 ]; then
+                $ambari_sudo echo "$major:$minor $read_iops_device" > $blkio_subgroup/blkio.throttle.read_iops_device
+            fi
+            if [ $write_iops_device -gt -1 ]; then
+                $ambari_sudo echo "$major:$minor $write_iops_device" > $blkio_subgroup/blkio.throttle.write_iops_device
+            fi
+        done
+    fi
+
+    # proportional weight division of bandwidth
+    if [ $blkio_weight -ge 10 -a $blkio_weight -le 1000 ]; then
+        $ambari_sudo echo "$blkio_weight" > $blkio_subgroup/blkio.weight
+    fi
+    if [ $blkio_leaf_weight -ge 10 -a $blkio_leaf_weight -le 1000 ]; then
+        $ambari_sudo echo "$blkio_leaf_weight" > $blkio_subgroup/blkio.leaf_weight
+    fi
+
+    # moving process pid to children group
+    moving_pid_to_new_group blkio
+}
+
+
+# create cgroup net_cls subgroup and tc qdisc, class, filter
+function create_net_subgroup()
+{
+    subsystem=$1
+
+    net_subgroup=$cgroup_root/$subsystem/$group_name
+    $ambari_sudo mkdir $net_subgroup
+    if [ $? -ne 0 ]; then
+        return
+    fi
+   
+    if [[ "$net_cls_classid" =~ ([0][x])[0-9,A-F]{8} ]]; then
+        $ambari_sudo echo "$net_cls_classid" > $net_subgroup/net_cls.classid
+        major=`echo $net_cls_classid | awk '{ print substr($0, 3, 4) }'`
+        minor=`echo $net_cls_classid | awk '{ print substr($0, 7, 4) }'`
+   
+        # delete prefix 0, 00, 000
+        major=`echo $major | sed 's/^0\+//g'`
+        minor=`echo $minor | sed 's/^0\+//g'`
+
+        # get netcard name 
+        ip=`hostname -i`
+        physical_eth=`ip add show | grep $ip | awk '{ print $NF }'`
+        # check net-card eth is logic net-card or not
+        logic_eth=`ip addr | grep "MASTER" | awk '{ print $2 }' | cut -d ':' -f1 | head -1`
+        if [ "$logic_eth" != "" ]; then
+            physical_eth=`cat /proc/net/bonding/$logic_eth | grep "Slave Interface:" | awk '{ print $3 }'`
+        fi
+
+        # every physical net-card needs to add htb qdisc, class and cgroup filter
+        for eth in $physical_eth
+        do
+            # if no root qdisc, to create it
+            tc qdisc show dev $eth | grep "^qdisc htb $major: root"
+            if [ $? -ne 0 ]; then
+                tc qdisc add dev $eth root handle $major: htb default 1
+            fi
+
+            # create default tc class, share tc class
+            for item in 1 2
+            do
+                tc class show dev $eth | grep "^class htb $major:$item root"
+                if [ $? -ne 0 ]; then
+                    tc class add dev $eth parent $major: classid $major:$item htb rate $total_bandwith ceil $total_bandwith
+                else
+                    tc class change dev $eth parent $major: classid $major:$item htb rate $total_bandwith ceil $total_bandwith
+                fi
+            done
+
+            # create new subgroup tc class and filter
+            tc class show dev $eth | grep "^class htb $major:$minor parent $major:2"
+            if [ $? -ne 0 ]; then
+                tc class add dev $eth parent $major:2 classid $major:$minor htb rate $assured_rate ceil $ceil_rate
+            else
+                tc class change dev $eth parent $major:2 classid $major:$minor htb rate $assured_rate ceil $ceil_rate
+            fi
+            
+            tc filter add dev $eth parent $major: protocol ip prio 10 handle $minor: cgroup
+            if [ $? -ne 0 ]; then
+                tc filter add dev $eth parent $major:2 protocol ip prio 10 handle $minor: cgroup
+            fi
+        done
+    fi
+    
+    # moving process pid to children group
+    moving_pid_to_new_group $subsystem 
+}
+
+function create_net_prio_subgroup()
+{
+    net_prio_subgroup=$cgroup_root/net_prio/$group_name
+    $ambari_sudo mkdir $net_prio_subgroup
+    if [ $? -ne 0 ]; then
+        return
+    fi
+
+    # moving process pid to children group
+    moving_pid_to_new_group net_prio
+}
+
+
+# -----------------------------------------------------------------------
+# shell main function start here ^_^ 
+# -----------------------------------------------------------------------
+if [ $cpu_cpuaact_subsystem_mount_same_dir == 'True' ]; then
+    create_cpu_subgroup cpu
+else
+    if [ $using_cpu_subsys == 'True' ]; then
+        create_cpu_subgroup cpu
+    fi
+    
+    if [ $using_cpuacct_subsys == 'True' ]; then
+        create_cpuacct_subgroup
+    fi
+fi
+
+if [ $using_memory_subsys == 'True' ]; then
+    create_memory_subgroup
+fi
+
+if [ $using_cpuset_subsys == 'True' ]; then
+    create_cpuset_subgroup
+fi
+
+if [ $using_blkio_subsys == 'True' ]; then
+    create_blkio_subgroup
+fi
+
+if [ $net_subsystem_mount_same_dir == 'True' ]; then
+    create_net_subgroup net_cls,net_prio
+else
+    if [ $using_net_cls_subsys == 'True' ]; then
+        create_net_subgroup net_cls
+    fi
+
+    if [ $using_net_prio_subsys == 'True' ]; then
+        create_net_prio_subgroup
+    fi
+fi
+

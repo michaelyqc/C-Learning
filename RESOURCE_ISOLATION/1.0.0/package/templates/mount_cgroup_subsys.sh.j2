@@ -1,0 +1,89 @@
+#!/bin/bash
+
+# using ambari_sudo.sh
+ambari_sudo="/var/lib/ambari-agent/ambari-sudo.sh"
+
+
+# -----------------------------------------------------------------------
+# shell global variable *_*
+# -----------------------------------------------------------------------
+cgroup_home={{cgroup_home}}
+
+cpu_cpuaact_mount_same_dir={{cpu_cpuaact_subsystem_mount_same_dir}}
+using_cpu={{using_cpu_subsys}}
+using_cpuacct={{using_cpuacct_subsys}}
+using_cpuset={{using_cpuset_subsys}}
+using_memory={{using_memory_subsys}}
+using_blkio={{using_blkio_subsys}}
+net_mount_same_dir={{net_subsystem_mount_same_dir}}
+using_net_cls={{using_net_cls_subsys}}
+using_net_prio={{using_net_prio_subsys}}
+
+
+# mount cgroup_root
+$ambari_sudo mkdir -p $cgroup_home/cgroup
+mount -t tmpfs cgroup_root $cgroup_home/cgroup
+# $ambari_sudo mount -t tmpfs -o ro,nosuid,nodev,noexec,mode=755 tmpfs $cgroup_home/cgroup
+
+
+# -----------------------------------------------------------------------
+# shell global function ~_~
+# -----------------------------------------------------------------------
+function mount_cgroup_subsystem()
+{
+    subsystem=$1
+    subdir=$2
+    
+    mount_dir=$cgroup_home/cgroup/$subdir
+    $ambari_sudo mkdir -p $mount_dir
+    $ambari_sudo mount -t cgroup -o rw,nosuid,nodev,noexec,relatime,$subsystem cgroup $mount_dir
+
+    # if this subsystem is not supported operation system, delete mount dir
+    if [ $? -ne 0 ]; then
+        rmdir $mount_dir
+    fi
+}
+
+
+# -----------------------------------------------------------------------
+# shell main function start here ^_^ 
+# -----------------------------------------------------------------------
+# mount cpu and cpuacct subsystem
+if [ $cpu_cpuaact_mount_same_dir == 'True' ]; then
+    mount_cgroup_subsystem cpu,cpuacct cpu
+else
+    if [ $using_cpu == 'True' ]; then
+        mount_cgroup_subsystem cpu cpu
+    fi
+    if [ $using_cpuacct == 'True' ]; then
+        mount_cgroup_subsystem cpuacct cpuacct
+    fi
+fi
+
+# mount cpuset subsystem
+if [ $using_cpuset == 'True' ]; then
+    mount_cgroup_subsystem cpuset cpuset
+fi
+
+# mount memory subsystem
+if [ $using_memory == 'True' ]; then
+    mount_cgroup_subsystem memory memory
+fi
+
+# mount blkio subsystem
+if [ $using_blkio == 'True' ]; then
+    mount_cgroup_subsystem blkio blkio
+fi
+
+# mount net_cls,net_prio subsystem
+if [ $net_mount_same_dir == 'True' ]; then
+    mount_cgroup_subsystem net_cls,net_prio net_cls,net_prio
+else
+    if [ $using_net_cls == 'True' ]; then
+        mount_cgroup_subsystem net_cls net_cls
+    fi
+    if [ $using_net_prio == 'True' ]; then
+        mount_cgroup_subsystem net_prio net_prio
+    fi
+fi
+

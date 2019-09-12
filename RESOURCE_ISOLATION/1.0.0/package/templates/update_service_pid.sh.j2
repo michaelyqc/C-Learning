@@ -1,0 +1,105 @@
+#!/bin/bash
+
+# using ambari_sudo.sh
+ambari_sudo="/var/lib/ambari-agent/ambari-sudo.sh"
+
+open_group={{open_group}}
+# if this resource isolation grouping is not open, exit directly and do nothing
+if [ $open_group != 'True' ]; then
+    exit 0
+fi
+
+
+# -----------------------------------------------------------------------
+# shell global variable *_*
+# -----------------------------------------------------------------------
+# create grouping at each opening cgroup subsystem
+cgroup_root={{cgroup_root}}
+moving_descendant_process_pid={{moving_descendant_process_pid}}
+group_name={{group_name}}
+service_pid_file_list={{service_pid_file_list}}
+
+cpu_cpuaact_subsystem_mount_same_dir={{cpu_cpuaact_subsystem_mount_same_dir}}
+using_cpu_subsys={{using_cpu_subsys}}
+using_cpuacct_subsys={{using_cpuacct_subsys}}
+just_support_cpu_shares={{just_support_cpu_shares}}
+using_memory_subsys={{using_memory_subsys}}
+using_cpuset_subsys={{using_cpuset_subsys}}
+using_blkio_subsys={{using_blkio_subsys}}
+just_support_blkio_shares={{just_support_blkio_shares}}
+net_subsystem_mount_same_dir={{net_subsystem_mount_same_dir}}
+using_net_cls_subsys={{using_net_cls_subsys}}
+using_net_prio_subsys={{using_net_prio_subsys}}
+
+
+# -----------------------------------------------------------------------
+# shell global function ~_~
+# -----------------------------------------------------------------------
+function recursion_moving_pid()
+{
+    subsystem=$1
+    parent_pid=$2
+    $ambari_sudo echo $parent_pid > $cgroup_root/$subsystem/$group_name/cgroup.procs
+    # moving children process of $pid to this subgroup
+    if [ $moving_descendant_process_pid == 'True' ]; then 
+        for child_pid in `ps --ppid $parent_pid | awk '{ print $1 }' |  grep -v "^PID"`
+        do
+            recursion_moving_pid $subsystem $child_pid
+        done
+    fi 
+}
+
+
+function refresh_service_pid()
+{
+    subsystem=$1
+    
+    for pid in `echo $service_pid_file_list | sed 's/,/ /g'`
+    do
+        parent_pid=`cat $pid | head -1`
+        if [[ "$parent_pid" =~ ^[1-9][0-9]*$ ]]; then
+            recursion_moving_pid $subsystem $parent_pid
+        fi
+    done
+}
+
+
+# -----------------------------------------------------------------------
+# shell main function start here ^_^ 
+# -----------------------------------------------------------------------
+if [ $cpu_cpuaact_subsystem_mount_same_dir == 'True' ]; then
+    # refresh service pid in this resource group
+    refresh_service_pid cpu
+else
+    if [ $using_cpu_subsys == 'True' ]; then
+        refresh_service_pid cpu
+    fi
+    if [ $using_cpuacct_subsys == 'True' ]; then
+        refresh_service_pid cpuacct
+    fi
+fi
+
+if [ $using_memory_subsys == 'True' ]; then
+    refresh_service_pid memory 
+fi
+
+if [ $using_cpuset_subsys == 'True' ]; then
+    refresh_service_pid cpuset 
+fi
+
+if [ $using_blkio_subsys == 'True' ]; then
+    refresh_service_pid blkio 
+fi
+
+if [ $net_subsystem_mount_same_dir == 'True' ]; then
+    refresh_service_pid net_cls,net_prio
+else
+    if [ $using_net_cls_subsys == 'True' ]; then
+        refresh_service_pid net_cls 
+    fi
+
+    if [ $using_net_prio_subsys == 'True' ]; then
+        refresh_service_pid net_prio 
+    fi
+fi
+

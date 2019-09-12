@@ -1,0 +1,305 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+
+<configuration supports_adding_forbidden="true">
+
+  <property>
+    <name>open_group</name>
+    <value>false</value>
+    <value-attributes>
+      <type>boolean</type>
+    </value-attributes>
+    <description>whether using this resource isolation group or not.</description>
+    <on-ambari-upgrade add="true"/>
+  </property>
+
+  <property>
+    <name>moving_descendant_process_pid</name>
+    <value>false</value>
+    <value-attributes>
+      <type>boolean</type>
+    </value-attributes>
+    <description>whether actively moving descendant process pid of service_pid_file_list to this resource isolation group or not.</description>
+    <on-ambari-upgrade add="true"/>
+  </property>
+
+  <property>
+    <name>group_name</name>
+    <value>hive</value>
+    <description>group_name should show that which services are included in this isolation group.</description>
+    <on-ambari-upgrade add="true"/>
+  </property>
+
+  <property>
+    <name>service_pid_file_list</name>
+    <value>/var/run/hive/hive.pid,/var/run/hive/hive-server.pid</value>
+    <description>the full pid-file path list of services, using comma(',') to separate.</description>
+    <on-ambari-upgrade add="true"/>
+  </property>
+
+  <property>
+    <name>cpu.cfs_period_us</name>
+    <value>100000</value>
+    <description>specifies a period of time in microseconds (µs, represented here as "us") for how regularly a cgroup's access to CPU resources should be reallocated.</description>
+    <value-attributes>
+      <type>int</type>
+    </value-attributes>
+    <on-ambari-upgrade add="true"/>
+  </property>
+
+  <property>
+    <name>cpu.cfs_quota_us</name>
+    <value>-1</value>
+    <description>specifies the total amount of time in microseconds (µs, represented here as "us") for which all tasks in a cgroup can run during one period (as defined by cpu.cfs_period_us).</description>
+    <value-attributes>
+      <type>int</type>
+    </value-attributes>
+    <on-ambari-upgrade add="true"/>
+  </property>
+
+  <property>
+    <name>cpu.rt_period_us</name>
+    <value>1000000</value>
+    <description>applicable to real-time scheduling tasks only, this parameter specifies a period of time in microseconds (µs, represented here as "us") for how regularly a cgroup's access to CPU resources is reallocated.</description>
+    <value-attributes>
+      <type>int</type>
+    </value-attributes>
+    <on-ambari-upgrade add="true"/>
+  </property>
+
+  <property>
+    <name>cpu.rt_runtime_us</name>
+    <value>0</value>
+    <description>applicable to real-time scheduling tasks only, this parameter specifies a period of time in microseconds (µs, represented here as "us") for the longest continuous period in which the tasks in a cgroup have access to CPU resources.</description>
+    <value-attributes>
+      <type>int</type>
+    </value-attributes>
+    <on-ambari-upgrade add="true"/>
+  </property>
+
+  <property>
+    <name>cpu.shares</name>
+    <value>1024</value>
+    <description>contains an integer value that specifies a relative share of CPU time available to the tasks in a cgroup. For example, tasks in two cgroups that have cpu.shares set to 100 will receive equal CPU time, but tasks in a cgroup that has cpu.shares set to 200 receive twice the CPU time of tasks in a cgroup where cpu.shares is set to 100. The value specified in the cpu.shares file must be 2 or higher.</description>
+    <value-attributes>
+      <type>int</type>
+    </value-attributes>
+    <on-ambari-upgrade add="true"/>
+  </property>
+
+  <property>
+    <name>cpuset.cpus</name>
+    <value>-1</value>
+    <description>specifies the CPUs that tasks in this cgroup are permitted to access. This is a comma-separated list, with dashes ("-") to represent ranges. For example 0-3 or 0,1,2,3</description>
+    <on-ambari-upgrade add="true"/>
+  </property>
+
+  <property>
+    <name>cpuset.cpu_exclusive</name>
+    <value>false</value>
+    <description>contains a flag (0 or 1) that specifies whether cpusets other than this one and its parents and children can share the CPUs specified for this cpuset. By default (0), CPUs are not allocated exclusively to one cpuset.</description>
+    <value-attributes>
+      <type>boolean</type>
+    </value-attributes>
+    <on-ambari-upgrade add="true"/>
+  </property>
+
+  <property>
+    <name>cpuset.mems</name>
+    <value>-1</value>
+    <description>specifies the memory nodes that tasks in this cgroup are permitted to access. This is a comma-separated list in the ASCII format, with dashes ("-") to represent ranges. For example 0-2,16</description>
+    <on-ambari-upgrade add="true"/>
+  </property>
+
+  <property>
+    <name>cpuset.mem_exclusive</name>
+    <value>false</value>
+    <description>contains a flag (0 or 1) that specifies whether other cpusets can share the memory nodes specified for the cpuset. By default (0), memory nodes are not allocated exclusively to one cpuset. Reserving memory nodes for the exclusive use of a cpuset (1) is functionally the same as enabling a memory hardwall with the cpuset.mem_hardwall parameter.</description>
+    <value-attributes>
+      <type>boolean</type>
+    </value-attributes>
+    <on-ambari-upgrade add="true"/>
+  </property>
+
+  <property>
+    <name>cpuset.memory_pressure_enabled</name>
+    <value>false</value>
+    <description>contains a flag (0 or 1) that specifies whether the system should compute the memory pressure created by the processes in the cgroup. Computed values are output to cpuset.memory_pressure and represent the rate at which processes attempt to free in-use memory, reported as an integer value of attempts to reclaim memory per second, multiplied by 1000.</description>
+    <value-attributes>
+      <type>boolean</type>
+    </value-attributes>
+    <on-ambari-upgrade add="true"/>
+  </property>
+
+  <property>
+    <name>memory.limit_in_bytes</name>
+    <value>-1</value>
+    <description>sets the maximum amount of user memory (including file cache). If no units are specified, the value is interpreted as bytes. However, it is possible to use suffixes to represent larger units — k or K for kilobytes, m or M for megabytes, and g or G for gigabytes. For example, to set the limit to 1 gigabyte, echo 1G</description>
+    <on-ambari-upgrade add="true"/>
+  </property>
+
+  <property>
+    <name>memory.memsw.limit_in_bytes</name>
+    <value>-1</value>
+    <description>sets the maximum amount for the sum of memory and swap usage. If no units are specified, the value is interpreted as bytes. However, it is possible to use suffixes to represent larger units — k or K for kilobytes, m or M for megabytes, and g or G for gigabytes.</description>
+    <on-ambari-upgrade add="true"/>
+  </property>
+
+  <property>
+    <name>memory.move_charge_at_immigrate</name>
+    <value>false</value>
+    <description>allows moving charges associated with a task along with task migration. Charging is a way of giving a penalty to cgroups which access shared pages too often. These penalties, also called charges, are by default not moved when a task migrates from one cgroup to another. The pages allocated from the original cgroup still remain charged to it; the charge is dropped when the page is freed or reclaimed.</description>
+    <value-attributes>
+      <type>boolean</type>
+    </value-attributes>
+    <on-ambari-upgrade add="true"/>
+  </property>
+
+  <property>
+    <name>memory.force_empty</name>
+    <value>false</value>
+    <description>when set to 0, empties memory of all pages used by tasks in the cgroup. This interface can only be used when the cgroup has no tasks. If memory cannot be freed, it is moved to a parent cgroup if possible. Use the memory.force_empty parameter before removing a cgroup to avoid moving out-of-use page caches to its parent cgroup.</description>
+    <value-attributes>
+      <type>boolean</type>
+    </value-attributes>
+    <on-ambari-upgrade add="true"/>
+  </property>
+
+  <property>
+    <name>memory.oom_control</name>
+    <value>false</value>
+    <description>contains a flag (0 or 1) that enables or disables the Out of Memory killer for a cgroup. If enabled (0), tasks that attempt to consume more memory than they are allowed are immediately killed by the OOM killer. The OOM killer is enabled by default in every cgroup using the memory subsystem; to disable it, write 1 to the memory.oom_control file.</description>
+    <value-attributes>
+      <type>boolean</type>
+    </value-attributes>
+    <on-ambari-upgrade add="true"/>
+  </property>
+
+  <property>
+    <name>memory.use_hierarchy</name>
+    <value>false</value>
+    <description>contains a flag (0 or 1) that specifies whether memory usage should be accounted for throughout a hierarchy of cgroups. If enabled (1), the memory subsystem reclaims memory from the children of and process that exceeds its memory limit. By default (0), the subsystem does not reclaim memory from a task's children.</description>
+    <value-attributes>
+      <type>boolean</type>
+    </value-attributes>
+    <on-ambari-upgrade add="true"/>
+  </property>
+
+  <property>
+    <name>blkio.throttle.read_bps_device</name>
+    <value>-1</value>
+    <description>Specifies upper limit on READ rate from the device. IO rate is specified in bytes per second. Rules are per device. Following is the format(major:minor  rate_bytes_per_second)</description>
+    <value-attributes>
+      <type>int</type>
+    </value-attributes>
+    <on-ambari-upgrade add="true"/>
+  </property>
+
+  <property>
+    <name>blkio.throttle.write_bps_device</name>
+    <value>-1</value>
+    <description>Specifies upper limit on WRITE rate from the device. IO rate is specified in bytes per second. Rules are per device. Following is the format(major:minor  rate_bytes_per_second)</description>
+    <value-attributes>
+      <type>int</type>
+    </value-attributes>
+    <on-ambari-upgrade add="true"/>
+  </property>
+
+  <property>
+    <name>blkio.throttle.read_iops_device</name>
+    <value>-1</value>
+    <description>Specifies upper limit on READ rate from the device. IO rate is specified in IO per second. Rules are per device. Following is the format(major:minor  rate_io_per_second)</description>
+    <value-attributes>
+      <type>int</type>
+    </value-attributes>
+    <on-ambari-upgrade add="true"/>
+  </property>
+
+  <property>
+    <name>blkio.throttle.write_iops_device</name>
+    <value>-1</value>
+    <description>Specifies upper limit on WRITE rate from the device. IO rate is specified in IO per second. Rules are per device. Following is the format(major:minor  rate_io_per_second)</description>
+    <value-attributes>
+      <type>int</type>
+    </value-attributes>
+    <on-ambari-upgrade add="true"/>
+  </property>
+
+  <property>
+    <name>blkio.leaf_weight</name>
+    <value>500</value>
+    <description>Equivalents of blkio.weight[_device] for the purpose of deciding how much weight tasks in the given cgroup has while competing with the cgroup's child cgroups</description>
+    <value-attributes>
+      <type>int</type>
+    </value-attributes>
+    <on-ambari-upgrade add="true"/>
+  </property>
+
+  <property>
+    <name>blkio.leaf_weight_device</name>
+    <value>0</value>
+    <description>Equivalents of blkio.weight[_device] for the purpose of deciding how much weight tasks in the given cgroup has while competing with the cgroup's child cgroups</description>
+    <value-attributes>
+      <type>int</type>
+      <overridable>false</overridable>
+    </value-attributes>
+    <on-ambari-upgrade add="true"/>
+  </property>
+
+  <property>
+    <name>blkio.weight</name>
+    <value>500</value>
+    <description>Specifies per cgroup weight. This is default weight of the group on all the devices until and unless overridden by per device rule.(See blkio.weight_device). Currently allowed range of weights is from 10 to 1000.</description>
+    <value-attributes>
+      <type>int</type>
+    </value-attributes>
+    <on-ambari-upgrade add="true"/>
+  </property>
+
+  <property>
+    <name>blkio.weight_device</name>
+    <value>0</value>
+    <description>One can specify per cgroup per device rules using this interface. These rules override the default value of group weight as specified by blkio.weight. Following is the format(dev_maj:dev_minor weight)</description>
+    <value-attributes>
+      <type>int</type>
+      <overridable>false</overridable>
+    </value-attributes>
+    <on-ambari-upgrade add="true"/>
+  </property>
+
+  <property>
+    <name>net_cls.classid</name>
+    <value>0x00100027</value>
+    <description>You can write hexadecimal values to net_cls.classid; the format for these values is 0xAAAABBBB; AAAA is the major handle number and BBBB is the minor handle number. Reading net_cls.classid yields a decimal result. defaultly, we use 0x00100020 as share parent tc class and use 0x00100001 as default tc class.</description>
+    <on-ambari-upgrade add="true"/>
+  </property>
+
+  <property>
+    <name>net_cls.total_bandwith</name>
+    <value>4Mbps</value>
+    <description>total_bandwith describes the total bandwith of NetCard. for example: 256Kbps(kiloBytes) 256Mbps(MegaBytes) 256Kbit(KiloBits) 256Mbit(MegaBits).</description>
+    <on-ambari-upgrade add="true"/>
+  </property>
+
+  <property>
+    <name>net_cls.assured_rate</name>
+    <value>2Mbps</value>
+    <description>assured_rate describes the least bandwith of subgroup must be assigned. for example: 256Kbps(kiloBytes) 256Mbps(MegaBytes) 256Kbit(KiloBits) 256Mbit(MegaBits).</description>
+    <on-ambari-upgrade add="true"/>
+  </property>
+
+  <property>
+    <name>net_cls.ceil_rate</name>
+    <value>4Mbps</value>
+    <description>ceil_rate describes the most bandwith of subgroup must be assigned. for example: 512Kbps(kiloBytes) 512Mbps(MegaBytes) 512Kbit(KiloBits) 512Mbit(MegaBits).</description>
+    <on-ambari-upgrade add="true"/>
+  </property>
+
+  <property>
+    <name>net_prio.ifpriomap</name>
+    <value>-1</value>
+    <description></description>
+    <on-ambari-upgrade add="true"/>
+  </property>
+
+</configuration>

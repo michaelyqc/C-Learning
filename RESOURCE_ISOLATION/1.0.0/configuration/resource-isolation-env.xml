@@ -1,0 +1,170 @@
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+
+<configuration supports_adding_forbidden="true">
+  <!-- Specified current service version -->
+  <property>
+    <name>service_version</name>
+    <value>1.0.0</value>
+    <value-attributes>
+      <overridable>false</overridable>
+    </value-attributes>
+    <description>current service version.</description>
+    <on-ambari-upgrade add="true"/>
+  </property>
+
+  <property>
+    <name>resource_isolation_user</name>
+    <value>root</value>
+    <property-type>USER</property-type>
+    <value-attributes>
+      <type>user</type>
+      <overridable>false</overridable>
+    </value-attributes>
+    <description>the user that resource isolation service operates as.</description>
+    <on-ambari-upgrade add="true"/>
+  </property>
+
+  <property>
+    <name>open_resource_isolation_service</name>
+    <value>true</value>
+    <value-attributes>
+      <type>boolean</type>
+    </value-attributes>
+    <description>open resource isolation function or not.</description>
+    <on-ambari-upgrade add="true"/>
+  </property>
+
+  <property>
+    <name>resource_isolation_policy</name>
+    <value>true</value>
+    <value-attributes>
+      <type>boolean</type>
+      <overridable>false</overridable>
+    </value-attributes>
+    <description>using upper limit policy or lower limit policy.</description>
+    <on-ambari-upgrade add="true"/>
+  </property>
+
+  <property>
+    <name>cpu_cpuaact_subsystem_mount_same_dir</name>
+    <value>false</value>
+    <value-attributes>
+      <type>boolean</type>
+    </value-attributes>
+    <description>some system of online machine always mount cpu and cpuacct subsystem at the same dir, resource_isolation_service must do same operation. open this option means using cpu and cpuaact subsystem meanwhile.</description>
+    <on-ambari-upgrade add="true"/>
+  </property>
+
+  <property>
+    <name>using_cpu_subsys</name>
+    <value>false</value>
+    <value-attributes>
+      <type>boolean</type>
+    </value-attributes>
+    <description>open cpu resource isolation subsystem.</description>
+    <on-ambari-upgrade add="true"/>
+  </property>
+
+  <property>
+    <name>using_cpuacct_subsys</name>
+    <value>false</value>
+    <value-attributes>
+      <type>boolean</type>
+    </value-attributes>
+    <description>open cpu usage statistic subsystem.</description>
+    <on-ambari-upgrade add="true"/>
+  </property>
+
+  <property>
+    <name>just_support_cpu_shares</name>
+    <value>false</value>
+    <value-attributes>
+      <type>boolean</type>
+    </value-attributes>
+    <description>some system of online machine maybe just support cpu proportional distribution.</description>
+    <on-ambari-upgrade add="true"/>
+  </property>
+
+  <property>
+    <name>using_memory_subsys</name>
+    <value>false</value>
+    <value-attributes>
+      <type>boolean</type>
+    </value-attributes>
+    <description>open memory resource isolation subsystem.</description>
+    <on-ambari-upgrade add="true"/>
+  </property>
+
+  <property>
+    <name>using_cpuset_subsys</name>
+    <value>false</value>
+    <value-attributes>
+      <type>boolean</type>
+    </value-attributes>
+    <description>open NUMA resource isolation subsystem.</description>
+    <on-ambari-upgrade add="true"/>
+  </property>
+
+  <property>
+    <name>using_blkio_subsys</name>
+    <value>false</value>
+    <value-attributes>
+      <type>boolean</type>
+    </value-attributes>
+    <description>open block device resource isolation subsystem.</description>
+    <on-ambari-upgrade add="true"/>
+  </property>
+
+  <property>
+    <name>just_support_blkio_shares</name>
+    <value>false</value>
+    <value-attributes>
+      <type>boolean</type>
+    </value-attributes>
+    <description>some system of online machine maybe just support disk proportional distribution.</description>
+    <on-ambari-upgrade add="true"/>
+  </property>
+
+  <property>
+    <name>net_subsystem_mount_same_dir</name>
+    <value>false</value>
+    <value-attributes>
+      <type>boolean</type>
+    </value-attributes>
+    <description>some system of online machine maybe mount net_cls and net_prio subsystem at the same dir, resource_isolation_service must do same operation. open this option means using net_cls and net_prio subsystem meanwhile.</description>
+    <on-ambari-upgrade add="true"/>
+  </property>
+
+  <property>
+    <name>using_net_cls_subsys</name>
+    <value>false</value>
+    <value-attributes>
+      <type>boolean</type>
+    </value-attributes>
+    <description>open network classid controller subsystem.</description>
+    <on-ambari-upgrade add="true"/>
+  </property>
+
+  <property>
+    <name>using_net_prio_subsys</name>
+    <value>false</value>
+    <value-attributes>
+      <type>boolean</type>
+    </value-attributes>
+    <description>open network priority controller subsystem.</description>
+    <on-ambari-upgrade add="true"/>
+  </property>
+
+  <property>
+    <name>resource_isolation_group_num</name>
+    <value>10</value>
+    <description>the number of resource isolation group on this machine node.</description>
+    <value-attributes>
+      <type>int</type>
+    </value-attributes>
+    <on-ambari-upgrade add="true"/>
+  </property>
+
+</configuration>
+

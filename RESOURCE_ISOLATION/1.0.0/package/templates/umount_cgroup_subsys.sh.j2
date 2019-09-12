@@ -1,0 +1,107 @@
+#!/bin/bash
+
+# using ambari_sudo.sh
+ambari_sudo="/var/lib/ambari-agent/ambari-sudo.sh"
+
+
+# -----------------------------------------------------------------------
+# shell global variable *_*
+# -----------------------------------------------------------------------
+cgroup_home={{cgroup_home}}
+
+cpu_cpuaact_mount_same_dir={{cpu_cpuaact_subsystem_mount_same_dir}}
+using_cpu={{using_cpu_subsys}}
+using_cpuacct={{using_cpuacct_subsys}}
+using_cpuset={{using_cpuset_subsys}}
+using_memory={{using_memory_subsys}}
+using_blkio={{using_blkio_subsys}}
+net_mount_same_dir={{net_subsystem_mount_same_dir}}
+using_net_cls={{using_net_cls_subsys}}
+using_net_prio={{using_net_prio_subsys}}
+
+
+# -----------------------------------------------------------------------
+# shell global function ~_~
+# -----------------------------------------------------------------------
+
+# the same subsystem maybe mounted at the same dir more than once 
+function loop_umount()
+{
+    subsystem=$1
+
+    mount_dir=$cgroup_home/cgroup/$subsystem
+    next=0
+    while [ -r $mount_dir -a  $next -eq 0 ]
+    do
+        $ambari_sudo umount $mount_dir
+        next=$?
+    done 
+    
+    if [ -r $mount_dir -a -d $mount_dir ]; then
+        rmdir $mount_dir
+    fi
+}
+
+
+# -----------------------------------------------------------------------
+# shell main function start here ^_^ 
+# -----------------------------------------------------------------------
+next=0
+while [ $next -eq 0 ]
+do
+    # first, umount cgroup subsystem; second, umount cgroup_root system
+    # umount cpu and cpuacct subsystem
+    if [ $cpu_cpuaact_mount_same_dir == 'True' ]; then
+        loop_umount cpu
+    else
+        if [ $using_cpu == 'True' ]; then
+            loop_umount cpu
+        fi
+        if [ $using_cpuacct == 'True' ]; then
+            loop_umount cpuacct
+        fi
+    fi
+
+    # umount cpuset subsystem
+    if [ $using_cpuset == 'True' ]; then
+        loop_umount cpuset
+    fi
+
+    # umount memory subsystem
+    if [ $using_memory == 'True' ]; then
+        loop_umount memory
+    fi
+
+    # umount blkio subsystem
+    if [ $using_blkio == 'True' ]; then
+        loop_umount blkio
+    fi
+
+    # umount net_cls and net_prio subsystem
+    if [ $net_mount_same_dir == 'True' ]; then
+        loop_umount net_cls,net_prio
+    else
+        if [ $using_net_cls == 'True' ]; then
+            loop_umount net_cls
+        fi
+        if [ $using_net_prio == 'True' ]; then
+            loop_umount net_prio
+        fi
+    fi
+
+    # prevent user modify config result in some subsystem are not umounted
+    for dir in `ls $cgroup_home/cgroup`
+    do
+        loop_umount $dir
+    done
+
+    # mount cgroup_root
+    $ambari_sudo umount $cgroup_home/cgroup
+    next=$?
+done 
+
+# delete the dir to use mount cgroup_root 
+if [ "`ls -A $cgroup_home/cgroup/`" == "" ]; then
+    $ambari_sudo rm -rf $cgroup_home/cgroup
+fi
+

@@ -1,0 +1,70 @@
+<?xml version="1.0"?>
+<metainfo>
+  <schemaVersion>2.0</schemaVersion>
+  <services>
+    <service>
+      <name>RESOURCE_ISOLATION</name>
+      <displayName>Resource Isolation</displayName>
+      <comment>A virtual agent service, responsible for resource isolation of bigdata service component.</comment>
+      <version>1.0.0</version>
+      <components>
+        <component>
+          <name>RESOURCE_ISOLATION_SERVICE</name>
+          <displayName>Resource Isolation</displayName>
+          <category>SLAVE</category>
+          <cardinality>1+</cardinality>
+          <commandScript>
+            <script>scripts/resource_isolation_service.py</script>
+            <scriptType>PYTHON</scriptType>
+            <timeout>10000</timeout>
+          </commandScript>
+          <customCommands>
+            <customCommand>
+              <name>UPDATECONFIG</name>
+              <commandScript>
+                <script>scripts/resource_isolation_service.py</script>
+                <scriptType>PYTHON</scriptType>
+                <timeout>10000</timeout>
+              </commandScript>
+            </customCommand>
+          </customCommands>
+          <bulkCommands>
+            <displayName>ResourceIsolation</displayName>
+          </bulkCommands>
+          <configuration-dependencies>
+            <config-type>resource-isolation-env</config-type>
+            <config-type>resource-isolation-group-0</config-type>
+            <config-type>resource-isolation-group-1</config-type>
+            <config-type>resource-isolation-group-2</config-type>
+            <config-type>resource-isolation-group-3</config-type>
+            <config-type>resource-isolation-group-4</config-type>
+            <config-type>resource-isolation-group-5</config-type>
+            <config-type>resource-isolation-group-6</config-type>
+            <config-type>resource-isolation-group-7</config-type>
+            <config-type>resource-isolation-group-8</config-type>
+            <config-type>resource-isolation-group-9</config-type>
+          </configuration-dependencies>
+        </component>
+      </components>
+
+      <osSpecifics>
+        <osSpecific>
+          <osFamily>redhat7,centos7</osFamily>
+          <packages>
+            <package>
+            </package>
+          </packages>
+        </osSpecific>
+
+        <osSpecific>
+          <osFamily>debian7,debian8</osFamily>
+          <packages>
+            <package>
+            </package>
+          </packages>
+        </osSpecific>
+      </osSpecifics>
+
+    </service>
+  </services>
+</metainfo>

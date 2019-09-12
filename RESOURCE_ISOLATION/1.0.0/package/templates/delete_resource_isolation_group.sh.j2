@@ -1,0 +1,163 @@
+#!/bin/bash
+
+# using ambari_sudo.sh
+ambari_sudo="/var/lib/ambari-agent/ambari-sudo.sh"
+
+open_group={{open_group}}
+# if this resource isolation grouping is not open, exit directly and do nothing
+if [ $open_group != 'True' ]; then
+    exit 0
+fi
+
+
+# -----------------------------------------------------------------------
+# shell global variable *_*
+# -----------------------------------------------------------------------
+# create grouping at each opening cgroup subsystem
+cgroup_root={{cgroup_root}}
+group_name={{group_name}}
+service_pid_file_list={{service_pid_file_list}}
+
+cpu_cpuaact_subsystem_mount_same_dir={{cpu_cpuaact_subsystem_mount_same_dir}}
+using_cpu_subsys={{using_cpu_subsys}}
+using_cpuacct_subsys={{using_cpuacct_subsys}}
+just_support_cpu_shares={{just_support_cpu_shares}}
+using_memory_subsys={{using_memory_subsys}}
+using_cpuset_subsys={{using_cpuset_subsys}}
+using_blkio_subsys={{using_blkio_subsys}}
+just_support_blkio_shares={{just_support_blkio_shares}}
+net_subsystem_mount_same_dir={{net_subsystem_mount_same_dir}}
+using_net_cls_subsys={{using_net_cls_subsys}}
+using_net_prio_subsys={{using_net_prio_subsys}}
+
+# net_cls subsystem config
+net_cls_classid={{net_cls_classid}}
+total_bandwith={{total_bandwith}}
+assured_rate={{assured_rate}}
+ceil_rate={{ceil_rate}}
+
+
+# -----------------------------------------------------------------------
+# shell global function ~_~
+# -----------------------------------------------------------------------
+function recursion_moving_pid()
+{
+    subsystem=$1
+    parent_pid=$2
+    $ambari_sudo echo $parent_pid > $cgroup_root/$subsystem/cgroup.procs
+    # moving children process of $pid to this subgroup
+    for child_pid in `ps --ppid $parent_pid | awk '{ print $1 }' |  grep -v "^PID"`
+    do
+        recursion_moving_pid $subsystem $child_pid
+    done
+}
+
+function moving_pid_to_root_group()
+{
+    subsystem=$1
+
+    # first, moving original parent process pid to cgroup subsystem root group
+    for pid in `echo $service_pid_file_list | sed 's/,/ /g'`
+    do
+        parent_pid=`cat $pid | head -1`
+        if [[ "$parent_pid" =~ ^[1-9][0-9]*$ ]]; then
+            recursion_moving_pid $subsystem $parent_pid
+        fi
+    done
+   
+    # second, moving children process pid to cgroup subsystem root group
+    for pid in `cat $cgroup_root/$subsystem/$group_name/cgroup.procs`
+    do
+        $ambari_sudo echo $pid > $cgroup_root/$subsystem/cgroup.procs
+    done
+}
+
+
+function delete_tc_qdisc_class_filter()
+{
+    if [[ "$net_cls_classid" =~ ([0][x])[0-9,A-F]{8} ]]; then
+        major=`echo $net_cls_classid | awk '{ print substr($0, 3, 4) }'`
+        minor=`echo $net_cls_classid | awk '{ print substr($0, 7, 4) }'`
+        
+        # delete prefix 0, 00, 000
+        major=`echo $major | sed 's/^0\+//g'`
+        minor=`echo $minor | sed 's/^0\+//g'`
+        
+        # get netcard name 
+        ip=`hostname -i`
+        physical_eth=`ip add show | grep $ip | awk '{ print $NF }'`
+        # check net-card eth is logic net-card or not
+        logic_eth=`ip addr | grep "MASTER" | awk '{ print $2 }' | cut -d ':' -f1 | head -1`
+        if [ "$logic_eth" != "" ]; then
+            physical_eth=`cat /proc/net/bonding/$logic_eth | grep "Slave Interface:" | awk '{ print $3 }'`
+        fi
+
+        # every physical net-card needs to add htb qdisc, class and cgroup filter
+        for eth in $physical_eth
+        do
+            # if root qdisc, share class, default class are created, to delete them
+            tc class show dev $eth | grep "^class htb $major:$minor"
+            if [ $? -eq 0 ]; then
+                tc class del dev $eth parent $major:2 classid $major:$minor htb rate $assured_rate ceil $ceil_rate
+            fi
+
+            # all cgroup tc class having been deleted, then delete parent tc qdisc
+            tc_class_num=`tc class show dev $eth | grep "^class htb $major:" | wc -l`
+            tc qdisc show dev $eth | grep "^qdisc htb $major:"
+            if [ $? -eq 0 -a $tc_class_num -le 2 ]; then
+                tc qdisc del dev $eth root handle $major: htb default 1
+            fi
+        done
+    fi
+}
+
+function moving_pid_and_delete_subgroup()
+{
+    subsystem=$1
+    
+    if [ -d $cgroup_root/$subsystem/$group_name ]; then
+        moving_pid_to_root_group $subsystem
+        $ambari_sudo rmdir $cgroup_root/$subsystem/$group_name
+    fi
+}
+
+
+# -----------------------------------------------------------------------
+# shell main function start here ^_^ 
+# -----------------------------------------------------------------------
+if [ $cpu_cpuaact_subsystem_mount_same_dir == 'True' ]; then
+    moving_pid_and_delete_subgroup cpu
+else
+    if [ $using_cpu_subsys == 'True' ]; then
+        moving_pid_and_delete_subgroup cpu
+    fi
+    if [ $using_cpuacct_subsys == 'True' ]; then
+        moving_pid_and_delete_subgroup cpuacct
+    fi
+fi
+
+if [ $using_memory_subsys == 'True' ]; then
+    moving_pid_and_delete_subgroup memory
+fi
+
+if [ $using_cpuset_subsys == 'True' ]; then
+    moving_pid_and_delete_subgroup cpuset
+fi
+
+if [ $using_blkio_subsys == 'True' ]; then
+    moving_pid_and_delete_subgroup blkio
+fi
+
+if [ $net_subsystem_mount_same_dir == 'True' ]; then
+    moving_pid_and_delete_subgroup net_cls,net_prio
+    delete_tc_qdisc_class_filter
+else
+    if [ $using_net_cls_subsys == 'True' ]; then
+        moving_pid_and_delete_subgroup net_cls
+        delete_tc_qdisc_class_filter
+    fi
+    if [ $using_net_prio_subsys == 'True' ]; then
+        moving_pid_and_delete_subgroup net_prio
+    fi
+fi
+
